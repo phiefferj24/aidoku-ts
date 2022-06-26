@@ -132,11 +132,15 @@ export class Net {
 	}
 
 	static set_rate_limit(limit: number) {
-		Wasm.networkInstances.get(Wasm.currentSource).rateLimit = limit;
+		if(Wasm.networkInstances.has(Wasm.currentSource)) {
+			Wasm.networkInstances.get(Wasm.currentSource)!.rateLimit = limit;
+		}
 	}
 
 	static set_rate_limit_period(period: number) {
-		Wasm.networkInstances.get(Wasm.currentSource).period = period;
+		if(Wasm.networkInstances.has(Wasm.currentSource)) {
+			Wasm.networkInstances.get(Wasm.currentSource)!.period = period;
+		}
 	}
 
 	static send(descriptor: number): void {

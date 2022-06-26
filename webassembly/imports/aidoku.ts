@@ -2,6 +2,7 @@ import { Chapter } from '../../models/chapter';
 import { Page } from '../../models/page';
 import { Wasm } from '../wasm';
 import { Manga, MangaPageResult } from '../../models/manga';
+import { DeepLink } from '../../models/deeplink'
 export class Aidoku {
 	static getNamespace(): string {
 		return 'aidoku';
