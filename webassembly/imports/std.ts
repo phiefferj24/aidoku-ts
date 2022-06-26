@@ -1,6 +1,5 @@
 import { DateTime } from 'luxon';
 import { Wasm } from '../wasm';
-
 export enum ObjectType {
 	null = 0,
 	int = 1,
@@ -128,15 +127,12 @@ export class Std {
 				return ObjectType.bool;
 			case 'object':
 				if (value instanceof Array) {
-					if (value.length > 0 && value[0].nodeType) {
-						return ObjectType.node;
-					}
 					return ObjectType.array;
 				}
 				if (value instanceof Date) {
 					return ObjectType.date;
 				}
-				if (value instanceof Node) {
+				if (value.html) {
 					return ObjectType.node;
 				}
 				return ObjectType.object;

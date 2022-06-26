@@ -1,6 +1,12 @@
+import { load, AnyNode, type Cheerio } from 'cheerio';
 import { Wasm } from '../wasm';
+import { Element } from 'domhandler';
 
 export class Html {
+	private static node(descriptor: number): Cheerio<AnyNode> {
+		return Wasm.readStdValue(descriptor) as Cheerio<AnyNode>;
+	}
+
 	static getExports(): WebAssembly.ModuleImports {
 		return {
 			parse: this.parse,
@@ -42,40 +48,19 @@ export class Html {
 	}
 
 	static parse(data: number, length: number): number {
-		if (length <= 0) {
-			return -1;
-		}
-
-		let dataString = Wasm.readString(data, length);
-		let value = $.parseHTML(dataString)[0];
-		return Wasm.storeStdValue(value);
+		return length <= 0 ? -1 : Wasm.storeStdValue(load(Wasm.readString(data, length)).root());
 	}
 
 	static parse_fragment(data: number, length: number): number {
-		if (length <= 0) {
-			return -1;
-		}
-
-		let dataString = Wasm.readString(data, length);
-		let value = $.parseHTML(dataString);
-		return Wasm.storeStdValue(value);
+		return length <= 0 ? -1 : Wasm.storeStdValue(load(Wasm.readString(data, length), null, false).root());
 	}
 
 	static parse_with_uri(data: number, length: number, uri: number, uriLength: number): number {
 		if (length <= 0) {
 			return -1;
 		}
-
-		let dataString = Wasm.readString(data, length);
-		let uriString = Wasm.readString(uri, uriLength);
-		let value = $.parseHTML(dataString)[0];
-		let base = document.createElement('base');
-		base.href = uriString;
-		if ($(value).has('head')) {
-			$(value).find('head').append(base);
-		} else {
-			$(value).prepend(base);
-		}
+		let value = load(Wasm.readString(data, length)).root();
+		value.prepend(new Element("base", { href: Wasm.readString(uri, uriLength) }));
 		return Wasm.storeStdValue(value);
 	}
 
@@ -83,167 +68,112 @@ export class Html {
 		if (length <= 0) {
 			return -1;
 		}
-
-		let dataString = Wasm.readString(data, length);
-		let uriString = Wasm.readString(uri, uriLength);
-		let value = $.parseHTML(dataString);
-		let outer = $.parseHTML('<html><head></head><body></body></html>')[0];
-		let base = document.createElement('base');
-		base.href = uriString;
-		$(outer).find('head').append(base);
-		for (let v of value) {
-			$(outer).find('body').append(v);
-		}
-		return Wasm.storeStdValue(outer);
+		let value = load(Wasm.readString(data, length), null, false).root();
+		value.prepend(new Element("base", { href: Wasm.readString(uri, uriLength) }));
+		return Wasm.storeStdValue(value);
 	}
 
 	static select(descriptor: number, selector: number, selectorLength: number): number {
-		if (selectorLength <= 0) {
-			return -1;
-		}
-
-		let selectorString = Wasm.readString(selector, selectorLength);
-		let value = $(Wasm.readStdValue(descriptor)).find(selectorString);
-		return Wasm.storeStdValue(value);
+		console.log(this.node, this.node(descriptor));
+		return selectorLength <= 0 ? -1 : Wasm.storeStdValue(this.node(descriptor).find(Wasm.readString(selector, selectorLength)));
 	}
 
 	static attr(descriptor: number, selector: number, selectorLength: number) {
-		if (selectorLength <= 0) {
-			return -1;
-		}
-
-		let selectorString = Wasm.readString(selector, selectorLength);
-		let value = $(Wasm.readStdValue(descriptor)).attr(selectorString);
-		return Wasm.storeStdValue(value);
+		return selectorLength <= 0 ? -1 : Wasm.storeStdValue(this.node(descriptor).attr(Wasm.readString(selector, selectorLength)));
 	}
+	
 
 	static first(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).first();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).first());
 	}
 
 	static last(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).last();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).last());
 	}
 
 	static next(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).next();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).next());
 	}
 
 	static previous(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).prev();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).prev());
 	}
 
 	static base_uri(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor));
-		let base = value.find('base');
-		if (base.length > 0) {
-			return Wasm.storeStdValue(base.attr('href'));
-		} else {
-			return Wasm.storeStdValue('');
-		}
+		let base = this.node(descriptor).find("base");
+		return base.length > 0 ? Wasm.storeStdValue(base.attr("href")) : Wasm.storeStdValue("")
 	}
 
 	static body(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor));
+		let value = this.node(descriptor);
 		let body = value.find('body');
-		if (body.length > 0) {
-			return Wasm.storeStdValue(body);
-		} else {
-			return Wasm.storeStdValue(value);
-		}
+		return Wasm.storeStdValue(body.length > 0 ? body : value);
 	}
 
 	static text(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).text();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor));
 	}
 
 	static own_text(descriptor: number): number {
-		let v = $(Wasm.readStdValue(descriptor));
-		let value = $(v).contents().not(v.children()).text();
-		return Wasm.storeStdValue(value);
+		let v = this.node(descriptor);
+		return Wasm.storeStdValue(v.contents().not(v.children()).text());
 	}
 
 	static data(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).data();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).data());
 	}
 
 	static array(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).toArray();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).toArray());
 	}
 
 	static html(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).html();
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).children().html());
 	}
 
 	static outer_html(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor))[0].outerHTML;
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).html());
 	}
 
 	static id(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).attr('id');
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).attr("id"));
 	}
 
 	static tag_name(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).prop('tagName');
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).prop("tagName"));
 	}
 
 	static class_name(descriptor: number): number {
-		let value = $(Wasm.readStdValue(descriptor)).attr('class');
-		return Wasm.storeStdValue(value);
+		return Wasm.storeStdValue(this.node(descriptor).attr("class"));
 	}
 
 	static has_class(descriptor: number, className: number, classLength: number): number {
 		if (classLength <= 0) {
 			return -1;
 		}
-
-		let classString = Wasm.readString(className, classLength);
-		let value = $(Wasm.readStdValue(descriptor)).hasClass(classString);
-		return value ? 1 : 0;
+		return this.node(descriptor).hasClass(Wasm.readString(className, classLength)) ? 1 : 0;
 	}
 
 	static has_attr(descriptor: number, attribute: number, attributeLength: number): number {
 		if (attributeLength <= 0) {
 			return -1;
 		}
-
-		let attributeString = Wasm.readString(attribute, attributeLength);
-		let value = $(Wasm.readStdValue(descriptor)).attr(attributeString);
-		return value ? 1 : 0;
+		return this.node(descriptor).attr(Wasm.readString(attribute, attributeLength)) ? 1 : 0;
 	}
 
 	static set_text(descriptor: number, text: number, textLength: number): void {
-		if(descriptor < 0) { return; }
-		let textString = Wasm.readString(text, textLength);
-		$(Wasm.readStdValue(descriptor)).text(textString);
+		if(descriptor >= 0) { this.node(descriptor).text(Wasm.readString(text, textLength)); }
 	}
 
 	static set_html(descriptor: number, html: number, htmlLength: number): void {
-		if(descriptor < 0) { return; }
-		let htmlString = Wasm.readString(html, htmlLength);
-		$(Wasm.readStdValue(descriptor)).html(htmlString);
+		if(descriptor >= 0) { this.node(descriptor).html(Wasm.readString(html, htmlLength)); }
 	}
 
 	static prepend(descriptor: number, text: number, textLength: number): void {
-		if(descriptor < 0) { return; }
-		let textString = Wasm.readString(text, textLength);
-		$(Wasm.readStdValue(descriptor)).prepend(textString);
+		if(descriptor >= 0) { this.node(descriptor).prepend(Wasm.readString(text, textLength)); }
 	}
 
 	static append(descriptor: number, text: number, textLength: number): void {
-		if(descriptor < 0) { return; }
-		let textString = Wasm.readString(text, textLength);
-		$(Wasm.readStdValue(descriptor)).append(textString);
+		if(descriptor >= 0) { this.node(descriptor).append(Wasm.readString(text, textLength)); }
 	}
 }

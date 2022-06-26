@@ -1,6 +1,7 @@
 import type { KVCObject } from '../../models/kvcObject';
 import { Wasm } from '../wasm';
 import type { Optional } from '../../models/optional';
+import { load } from 'cheerio';
 
 export enum HttpMethod {
 	GET = 0,
@@ -177,7 +178,7 @@ export class Net {
 				.filter((line) => line.length == 2)) {
 				headers.set(key, value);
 			}
-			let response = new Uint8Array();
+			let response: Uint8Array;
 			switch(typeof xhr.response) {
 				case 'string':
 					response = new TextEncoder().encode(xhr.response);
@@ -236,8 +237,7 @@ export class Net {
 	static html(descriptor: number): number {
 		if (Wasm.requests.has(descriptor) && Wasm.requests.get(descriptor)!.response?.data) {
 			let response = Wasm.requests.get(descriptor)!.response;
-			let html = $.parseHTML(String.fromCharCode(...response!.data!))[0];
-			return Wasm.storeStdValue(html);
+			return Wasm.storeStdValue(load(String.fromCharCode(...response!.data!)));
 		}
 		return -1;
 	}

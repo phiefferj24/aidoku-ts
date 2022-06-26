@@ -33,9 +33,10 @@ export class AidokuSource implements MangaSource {
                     break;
                 case MangaFilterType.singleSelect:
                     aidokuFilters.push(new SelectFilter(filter.name, filter.value as string[], filter.index));
+                    break;
                 case MangaFilterType.singleSelectAscendable:
                     aidokuFilters.push(new SortFilter(filter.name, filter.value as string[], true, new SortSelection(filter.index, filter.ascending ?? false)));
-                    break
+                    break;
                 case MangaFilterType.multiSelect:
                     let innerFilters: FilterBase[];
                     if(filter.name.includes("Genre")) {
@@ -58,7 +59,7 @@ export class AidokuSource implements MangaSource {
         }
         Wasm.currentSource = this.id;
         let filterDescriptor = Wasm.storeStdValue(aidokuFilters);
-        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource).exports as any).get_manga_list(filterDescriptor, page);
+        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_manga_list(filterDescriptor, page);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Manga.MangaPageResult;
         Wasm.removeStdValue(filterDescriptor);
         Wasm.removeStdValue(resultDescriptor);
@@ -79,7 +80,7 @@ export class AidokuSource implements MangaSource {
         let listing = new Aidoku.Listing.Listing(name);
         let listingDescriptor = Wasm.storeStdValue(listing);
         Wasm.currentSource = this.id;
-        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource).exports as any).get_manga_listing(listingDescriptor, page);
+        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_manga_listing(listingDescriptor, page);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Manga.MangaPageResult;
         Wasm.removeStdValue(listingDescriptor);
         Wasm.removeStdValue(resultDescriptor);
@@ -99,7 +100,7 @@ export class AidokuSource implements MangaSource {
     async getMangaDetails(id: string): Promise<Manga> {
         let mangaDescriptor = Wasm.storeStdValue(new Aidoku.Manga.Manga(this.id, id));
         Wasm.currentSource = this.id;
-        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource).exports as any).get_manga_details(mangaDescriptor);
+        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_manga_details(mangaDescriptor);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Manga.Manga;
         Wasm.removeStdValue(mangaDescriptor);
         Wasm.removeStdValue(resultDescriptor);
@@ -119,13 +120,13 @@ export class AidokuSource implements MangaSource {
     async getMangaChapters(id: string): Promise<MangaChapter[]> {
         let mangaDescriptor = Wasm.storeStdValue(new Aidoku.Manga.Manga(this.id, id));
         Wasm.currentSource = this.id;
-        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource).exports as any).get_chapter_list(mangaDescriptor);
+        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_chapter_list(mangaDescriptor);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Chapter.Chapter[];
         Wasm.removeStdValue(mangaDescriptor);
         Wasm.removeStdValue(resultDescriptor);
         return result.map(c => new MangaChapter(
             c.id,
-            c.chapterNum,
+            c.chapterNum ?? 0,
             c.title,
             c.scanlator,
             c.dateUpdated,
@@ -136,7 +137,7 @@ export class AidokuSource implements MangaSource {
     async getMangaChapterPages(id: string, chapterId: string): Promise<MangaPage[]> {
         let chapterDescriptor = Wasm.storeStdValue(new Aidoku.Chapter.Chapter(this.id, id, chapterId));
         Wasm.currentSource = this.id;
-        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource).exports as any).get_chapter_pages(chapterDescriptor);
+        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_chapter_pages(chapterDescriptor);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Page.Page[];
         Wasm.removeStdValue(chapterDescriptor);
         Wasm.removeStdValue(resultDescriptor);
@@ -147,28 +148,23 @@ export class AidokuSource implements MangaSource {
         ));
     }
     async init(url: string): Promise<void> {
-        console.log("1")
         let file = await fetch(url).then(res => res.blob());
-        console.log("2")
         let blobReader = new BlobReader(file);
-        console.log("3")
         let zipReader = new ZipReader(blobReader);
-        console.log("4")
         let entries = await zipReader.getEntries();
-        console.log("5")
-        let mainWasmEntry = entries.find(entry => entry.filename === "main.wasm");
-        let sourceJsonEntry = entries.find(entry => entry.filename === "source.json");
-        let filtersJsonEntry = entries.find(entry => entry.filename === "filters.json");
-        let settingsJsonEntry = entries.find(entry => entry.filename === "settings.json");
+        let mainWasmEntry = entries.find(entry => entry.filename === "Payload/main.wasm");
+        let sourceJsonEntry = entries.find(entry => entry.filename === "Payload/source.json");
+        let filtersJsonEntry = entries.find(entry => entry.filename === "Payload/filters.json");
+        let settingsJsonEntry = entries.find(entry => entry.filename === "Payload/settings.json");
         let textWriter = new TextWriter();
         let arrayWriter = new Uint8ArrayWriter();
-        let mainWasm = await mainWasmEntry.getData(arrayWriter) as Uint8Array;
-        let sourceJsonText = await sourceJsonEntry.getData(textWriter) as string;
-        let filtersJsonText = await filtersJsonEntry.getData(textWriter) as string;
-        let settingsJsonText = await settingsJsonEntry.getData(textWriter) as string;
-        this.sourceJson = JSON.parse(sourceJsonText);
-        this.filtersJson = JSON.parse(filtersJsonText);
-        this.settingsJson = JSON.parse(settingsJsonText);
+        let mainWasm = await mainWasmEntry?.getData?.(arrayWriter) as Uint8Array ?? new Uint8Array(0);
+        let sourceJsonText = await sourceJsonEntry?.getData?.(textWriter) as string;
+        let filtersJsonText = await filtersJsonEntry?.getData?.(textWriter) as string;
+        let settingsJsonText = await settingsJsonEntry?.getData?.(textWriter) as string;
+        this.sourceJson = sourceJsonText ? JSON.parse(sourceJsonText) : {};
+        this.filtersJson = filtersJsonText ? JSON.parse(filtersJsonText) : {};
+        this.settingsJson = settingsJsonText ? JSON.parse(settingsJsonText) : {};
         this.id = this.sourceJson.info.id;
         this.name = this.sourceJson.info.name;
         this.version = this.sourceJson.info.version;
