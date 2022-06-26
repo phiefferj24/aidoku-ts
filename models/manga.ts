@@ -2,7 +2,7 @@ export enum MangaStatus {
 	unknown = 0,
 	ongoing = 1,
 	completed = 2,
-	cancelled = 3,
+	dropped = 3,
 	hiatus = 4
 }
 

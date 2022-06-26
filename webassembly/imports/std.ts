@@ -1,6 +1,5 @@
-import moment from 'moment-timezone';
+import { DateTime } from 'luxon';
 import { Wasm } from '../wasm';
-import util from "util";
 
 export enum ObjectType {
 	null = 0,
@@ -254,9 +253,9 @@ export class Std {
 		let formatString = Wasm.readString(format, formatLen);
 		let localeString = localeLen > 0 ? Wasm.readString(locale, localeLen) : undefined;
 		let timeZoneString = timeZoneLen > 0 ? Wasm.readString(timeZone, timeZoneLen) : undefined;
-		let time = moment(value, formatString, localeString);
+		let time = DateTime.fromFormat(value, formatString, { locale: localeString });
 		if (timeZoneString) {
-			time = time.tz(timeZoneString);
+			time = time.setZone(timeZoneString);
 		}
 		return time.valueOf();
 	}

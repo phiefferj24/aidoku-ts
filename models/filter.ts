@@ -189,9 +189,6 @@ export class AuthorFilter extends TextFilter {
 export class GenreFilter extends CheckFilter {
 	constructor(name: string, canExclude: boolean, id: any = null, value: Optional<boolean> = null) {
 		super(name, canExclude, id, value)
-		this.type = FilterType.check
-		this.canExclude = canExclude
-		this.id = id
 		this.type = FilterType.genre
 	}
 }

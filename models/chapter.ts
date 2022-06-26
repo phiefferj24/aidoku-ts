@@ -2,27 +2,27 @@ export class Chapter {
 	sourceId: string;
 	id: string;
 	mangaId: string;
-	title: string;
-	scanlator: string;
-	url: string;
-	lang: string;
-	chapterNum: number;
-	volumeNum: number;
-	dateUpdated: Date;
-	sourceOrder: number;
+	title?: string;
+	scanlator?: string;
+	url?: string;
+	lang?: string;
+	chapterNum?: number;
+	volumeNum?: number;
+	dateUpdated?: Date;
+	sourceOrder?: number;
 
 	constructor(
 		sourceId: string,
 		id: string,
 		mangaId: string,
-		title: string,
-		scanlator: string,
-		url: string,
-		lang: string,
-		chapterNum: number,
-		volumeNum: number,
-		dateUpdated: Date,
-		sourceOrder: number
+		title?: string,
+		scanlator?: string,
+		url?: string,
+		lang?: string,
+		chapterNum?: number,
+		volumeNum?: number,
+		dateUpdated?: Date,
+		sourceOrder?: number
 	) {
 		this.sourceId = sourceId;
 		this.id = id;

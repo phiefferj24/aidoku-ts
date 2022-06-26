@@ -10,15 +10,26 @@ export class Wasm {
 
 	static currentSource = '';
 
-    static async start(url: string) {
+    static async start(id: string, url: string) {
         let module = await WebAssembly.compileStreaming(fetch(url));
         let instance = await WebAssembly.instantiate(module, this.imports);
         if (instance.exports['initialize']) {
             (instance.exports as any).initialize();
         }
-		this.instances.set(url, instance);
-		this.networkInstances.set(url, new Net());
-		this.currentSource = url;
+		this.instances.set(id, instance);
+		this.networkInstances.set(id, new Net());
+		this.currentSource = id;
+    }
+
+	static async startWithData(id: string, data: ArrayBuffer) {
+        let module = await WebAssembly.compile(data);
+        let instance = await WebAssembly.instantiate(module, this.imports);
+        if (instance.exports['initialize']) {
+            (instance.exports as any).initialize();
+        }
+		this.instances.set(id, instance);
+		this.networkInstances.set(id, new Net());
+		this.currentSource = id;
     }
 
 	static chapterCounter = 0;

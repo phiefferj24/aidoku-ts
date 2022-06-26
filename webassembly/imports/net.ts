@@ -1,7 +1,6 @@
 import type { KVCObject } from '../../models/kvcObject';
 import { Wasm } from '../wasm';
 import type { Optional } from '../../models/optional';
-import util from 'util';
 
 export enum HttpMethod {
 	GET = 0,
