@@ -1,7 +1,6 @@
 import type { KVCObject } from '../../models/kvcObject';
 import { Wasm } from '../wasm';
 import type { Optional } from '../../models/optional';
-import util from 'util';
 
 export enum HttpMethod {
 	GET = 0,
@@ -133,11 +132,15 @@ export class Net {
 	}
 
 	static set_rate_limit(limit: number) {
-		Wasm.networkInstances.get(Wasm.currentSource).rateLimit = limit;
+		if(Wasm.networkInstances.has(Wasm.currentSource)) {
+			Wasm.networkInstances.get(Wasm.currentSource)!.rateLimit = limit;
+		}
 	}
 
 	static set_rate_limit_period(period: number) {
-		Wasm.networkInstances.get(Wasm.currentSource).period = period;
+		if(Wasm.networkInstances.has(Wasm.currentSource)) {
+			Wasm.networkInstances.get(Wasm.currentSource)!.period = period;
+		}
 	}
 
 	static send(descriptor: number): void {

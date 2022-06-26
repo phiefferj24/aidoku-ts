@@ -1,6 +1,5 @@
 import moment from 'moment-timezone';
 import { Wasm } from '../wasm';
-import util from "util";
 
 export enum ObjectType {
 	null = 0,

@@ -66,27 +66,38 @@ export class Wasm {
 	}
 
 	static readString(ptr: number, len: number): string {
-		const buffer = (Wasm.instances.get(Wasm.currentSource).exports.memory as any).buffer;
-		const bytes = new Uint8Array(buffer, ptr, len);
-		return String.fromCharCode(...bytes);
+		if(Wasm.instances.has(Wasm.currentSource)) {
+			const buffer = (Wasm.instances.get(Wasm.currentSource)!.exports.memory as any).buffer;
+			const bytes = new Uint8Array(buffer, ptr, len);
+			return String.fromCharCode(...bytes);
+		}
+		return '';
 	}
 	static readBytes(ptr: number, len: number): Uint8Array {
-		const buffer = (Wasm.instances.get(Wasm.currentSource).exports.memory as any).buffer;
-		return new Uint8Array(buffer, ptr, len);
+		if(Wasm.instances.has(Wasm.currentSource)) {
+			const buffer = (Wasm.instances.get(Wasm.currentSource)!.exports.memory as any).buffer;
+			return new Uint8Array(buffer, ptr, len);
+		}
+		return new Uint8Array(0);
 	}
 	static writeString(ptr: number, str: string): void {
-		const buffer = (Wasm.instances.get(Wasm.currentSource).exports.memory as any).buffer;
-		const bytes = new Uint8Array(buffer, ptr, str.length);
-		for (let i = 0; i < str.length; i++) {
-			bytes[i] = str.charCodeAt(i);
+		if(Wasm.instances.has(Wasm.currentSource)) {
+			const buffer = (Wasm.instances.get(Wasm.currentSource)!.exports.memory as any).buffer;
+			const bytes = new Uint8Array(buffer, ptr, str.length);
+			for (let i = 0; i < str.length; i++) {
+				bytes[i] = str.charCodeAt(i);
+			}
 		}
 	}
 	static writeBytes(ptr: number, bytes: Uint8Array): void {
-		const buffer = (Wasm.instances.get(Wasm.currentSource).exports.memory as any).buffer;
-		const dest = new Uint8Array(buffer, ptr, bytes.length);
-		for (let i = 0; i < bytes.length; i++) {
-			dest[i] = bytes[i];
+		if(Wasm.instances.has(Wasm.currentSource)) {
+			const buffer = (Wasm.instances.get(Wasm.currentSource)!.exports.memory as any).buffer;
+			const dest = new Uint8Array(buffer, ptr, bytes.length);
+			for (let i = 0; i < bytes.length; i++) {
+				dest[i] = bytes[i];
+			}
 		}
+		
 	}
 }
 
