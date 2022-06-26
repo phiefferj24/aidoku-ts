@@ -1,7 +1,7 @@
 import type { KVCObject } from '../../models/kvcObject';
 import { Wasm } from '../wasm';
 import type { Optional } from '../../models/optional';
-import { load } from 'cheerio';
+import { AnyNode, Cheerio, load } from 'cheerio';
 
 export enum HttpMethod {
 	GET = 0,
@@ -168,7 +168,10 @@ export class Net {
 					break;
 			}
 			let xhr = new XMLHttpRequest();
-			xhr.open(method, Wasm.requests.get(descriptor)!.url!, false);
+			xhr.open(method, `https://proxy.soshiki.moe/${Wasm.requests.get(descriptor)!.url!}`, false);
+			for(let header of Wasm.requests.get(descriptor)!.headers) {
+				xhr.setRequestHeader(header[0], header[1]);
+			}
 			xhr.send(Wasm.requests.get(descriptor)!.body);
 			let headers = new Map<string, string>();
 			for (let [key, value] of xhr
@@ -237,7 +240,7 @@ export class Net {
 	static html(descriptor: number): number {
 		if (Wasm.requests.has(descriptor) && Wasm.requests.get(descriptor)!.response?.data) {
 			let response = Wasm.requests.get(descriptor)!.response;
-			return Wasm.storeStdValue(load(String.fromCharCode(...response!.data!)));
+			return Wasm.storeStdValue(load(String.fromCharCode(...response!.data!)).root() as Cheerio<AnyNode>);
 		}
 		return -1;
 	}

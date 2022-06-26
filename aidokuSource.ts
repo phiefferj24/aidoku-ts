@@ -160,7 +160,9 @@ export class AidokuSource implements MangaSource {
         let arrayWriter = new Uint8ArrayWriter();
         let mainWasm = await mainWasmEntry?.getData?.(arrayWriter) as Uint8Array ?? new Uint8Array(0);
         let sourceJsonText = await sourceJsonEntry?.getData?.(textWriter) as string;
+        textWriter = new TextWriter();
         let filtersJsonText = await filtersJsonEntry?.getData?.(textWriter) as string;
+        textWriter = new TextWriter();
         let settingsJsonText = await settingsJsonEntry?.getData?.(textWriter) as string;
         this.sourceJson = sourceJsonText ? JSON.parse(sourceJsonText) : {};
         this.filtersJson = filtersJsonText ? JSON.parse(filtersJsonText) : {};
