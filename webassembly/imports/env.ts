@@ -16,7 +16,8 @@ export class Env {
             return;
         }
         let strString = Wasm.readString(str, length);
-            }
+        console.log(strString);
+    }
     static abort(msg: number, fileName: number, line: number, column: number) {
         let messageLength = Wasm.readBytes(msg - 4, 1)[0];
         let fileLength = Wasm.readBytes(fileName - 4, 1)[0];

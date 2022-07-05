@@ -55,6 +55,19 @@ export class Std {
 		return 'std';
 	}
 
+	static e = () => {
+		const seen = new WeakSet();
+		return (key, value) => {
+		  if (typeof value === "object" && value !== null) {
+			if (seen.has(value)) {
+			  return;
+			}
+			seen.add(value);
+		  }
+		  return value;
+		};
+	  };
+
 	static copy(descriptor: number): number {
 		if (descriptor < 0) {
 			return -1;

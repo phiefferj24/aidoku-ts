@@ -1,6 +1,7 @@
 import { load, AnyNode, type Cheerio } from 'cheerio';
 import { Wasm } from '../wasm';
 import { Element } from 'domhandler';
+import { Std } from './std';
 
 export class Html {
 	private static node(descriptor: number): Cheerio<AnyNode> {
