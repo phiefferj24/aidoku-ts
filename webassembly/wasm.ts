@@ -108,7 +108,6 @@ export class Wasm {
 				dest[i] = bytes[i];
 			}
 		}
-		
 	}
 }
 

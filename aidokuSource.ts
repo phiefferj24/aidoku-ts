@@ -173,6 +173,44 @@ export class AidokuSource implements MangaSource {
         this.type = MangaSourceType.Aidoku;
         this.nsfw = this.sourceJson.info.nsfw ?? 0;
         this.image = url.replace(/\/[^/]*$/, "/icons");
+        for(let obj of this.settingsJson) {
+            this.parseSettings(obj);
+        }
         await Wasm.startWithData(this.id, mainWasm.buffer);
+    }
+
+    parseSettings(obj: {[key: string]: any}): void {
+        switch(obj.type) {
+            case "group":
+                for(let child of obj.items) {
+                    this.parseSettings(child);
+                }
+                break;
+            case "switch":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `boolean:${obj.default || false}`);
+                break;
+            case "stepper":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `float:${obj.default || 0}`);
+                break;
+            case "text":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `string:${obj.default || ""}`);
+                break;
+            case "segment":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `string:${obj.default || ""}`);
+                break;
+            case "select":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `string:${obj.default || ""}`);
+                break;
+            case "multi-select":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `stringarray:${AidokuSource.stringArrayToString(obj.default as string[] || [])}`);
+                break;
+            case "multi-single-select":
+                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `stringarray:${AidokuSource.stringArrayToString(obj.default as string[] || [])}`);
+                break;
+            }
+    }
+
+    static stringArrayToString(arr: string[]): string {
+        return arr.join("\0");
     }
 }
