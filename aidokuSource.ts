@@ -1,5 +1,5 @@
 import { CheckFilter, FilterBase, GenreFilter, GroupFilter, SelectFilter, SortFilter, SortSelection, TextFilter, TitleFilter } from "./models/filter";
-import { Manga, MangaPageResult, MangaChapter, MangaFilter, MangaFilterType, MangaPage, MangaSource, MangaSourceType } from "../mangaSource";
+import { Manga, MangaPageResult, MangaChapter, MangaFilter, MangaFilterType, MangaPage, MangaSource, MangaSourceType, ExternalMangaSource } from "../mangaSource";
 import * as Aidoku from "./models";
 import { BlobReader, ZipReader, TextWriter, Uint8ArrayWriter } from "@zip.js/zip.js";
 import { Wasm } from "./webassembly/wasm";
@@ -147,8 +147,11 @@ export class AidokuSource implements MangaSource {
             p.base64,
         ));
     }
-    async init(url: string): Promise<void> {
-        let file = await fetch(url).then(res => res.blob());
+    async init(json: any, url: string): Promise<void> {
+        let baseUrl = url.replace(/\/[^/]*$/, "");
+        let res = await fetch(url).then(res => res.json());
+        let info = res.find(i => i.id === json.id);
+        let file = await fetch(baseUrl + "/sources/" + info.file).then(res => res.blob());
         let blobReader = new BlobReader(file);
         let zipReader = new ZipReader(blobReader);
         let entries = await zipReader.getEntries();
@@ -166,13 +169,13 @@ export class AidokuSource implements MangaSource {
         let settingsJsonText = await settingsJsonEntry?.getData?.(textWriter) as string;
         this.sourceJson = sourceJsonText ? JSON.parse(sourceJsonText) : {};
         this.filtersJson = filtersJsonText ? JSON.parse(filtersJsonText) : {};
-        this.settingsJson = settingsJsonText ? JSON.parse(settingsJsonText) : {};
+        this.settingsJson = settingsJsonText ? JSON.parse(settingsJsonText) : [];
         this.id = this.sourceJson.info.id;
         this.name = this.sourceJson.info.name;
         this.version = this.sourceJson.info.version;
-        this.type = MangaSourceType.Aidoku;
+        this.type = MangaSourceType.aidoku;
         this.nsfw = this.sourceJson.info.nsfw ?? 0;
-        this.image = url.replace(/\/[^/]*$/, "/icons");
+        this.image = baseUrl + "/icons/" + json.icon;
         for(let obj of this.settingsJson) {
             this.parseSettings(obj);
         }
@@ -180,6 +183,7 @@ export class AidokuSource implements MangaSource {
     }
 
     parseSettings(obj: {[key: string]: any}): void {
+        let defaults;
         switch(obj.type) {
             case "group":
                 for(let child of obj.items) {
@@ -187,30 +191,84 @@ export class AidokuSource implements MangaSource {
                 }
                 break;
             case "switch":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `boolean:${obj.default || false}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `boolean:${obj.default || false}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             case "stepper":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `float:${obj.default || 0}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `float:${obj.default || 0}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             case "text":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `string:${obj.default || ""}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `string:${obj.default || ""}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             case "segment":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `string:${obj.default || ""}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `string:${obj.default || ""}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             case "select":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `string:${obj.default || ""}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `string:${obj.default || ""}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             case "multi-select":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `stringarray:${AidokuSource.stringArrayToString(obj.default as string[] || [])}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `stringarray:${AidokuSource.stringArrayToString(obj.default as string[] || [])}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             case "multi-single-select":
-                localStorage.setItem(`manga:aidoku:${this.id}:${obj.key}`, `stringarray:${AidokuSource.stringArrayToString(obj.default as string[] || [])}`);
+                defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+                if(!defaults['aidoku']) defaults['aidoku'] = {};
+                if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+                if(obj.default) defaults['aidoku'][this.id][obj.key] = `stringarray:${AidokuSource.stringArrayToString(obj.default as string[] || [])}`;
+                localStorage.setItem("manga", JSON.stringify(defaults));
                 break;
             }
     }
 
     static stringArrayToString(arr: string[]): string {
         return arr.join("\0");
+    }
+
+    static parseSourceList(list: any, url: string): ExternalMangaSource[] {
+        let sources: ExternalMangaSource[] = [];
+        for(let obj of list) {
+            sources.push({
+                name: obj.name,
+                id: obj.id,
+                version: obj.version,
+                type: MangaSourceType.aidoku,
+                nsfw: obj.nsfw,
+                image: url.replace(/\/[^/]*$/, `/icons/${obj.icon}`),
+                listUrl: url,
+            } as ExternalMangaSource);
+        }
+        const languageCodes = [
+            "multi", "en", "ca", "de", "es", "fr", "id", "it", "pl", "pt-br", "vi", "tr", "ru", "ar", "zh", "zh-hans", "ja", "ko"
+        ]
+        sources = sources.sort((a, b) => {
+            let aLang = languageCodes.indexOf(a.id.split(".")[0]);
+            let bLang = languageCodes.indexOf(b.id.split(".")[0]);
+            if(aLang < bLang) return -1;
+            if(aLang > bLang) return 1;
+            return 0;
+        });
+        return sources;
     }
 }

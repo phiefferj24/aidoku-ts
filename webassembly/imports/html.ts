@@ -1,12 +1,11 @@
 import { load, AnyNode, type Cheerio } from 'cheerio';
 import { Wasm } from '../wasm';
 import { Element } from 'domhandler';
-import { Std } from './std';
 
 export class Html {
 	private static node(descriptor: number): Cheerio<AnyNode> {
 		let value = Wasm.readStdValue(descriptor);
-		return value.find ? value : load(value.toString(), null, false).root() as Cheerio<AnyNode>;
+		return value.html ? value : load(value.toString(), null, false).root() as Cheerio<AnyNode>;
 	}
 
 	static getExports(): WebAssembly.ModuleImports {

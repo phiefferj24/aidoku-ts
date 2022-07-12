@@ -80,7 +80,7 @@ export class Wasm {
 		if(Wasm.instances.has(Wasm.currentSource)) {
 			const buffer = (Wasm.instances.get(Wasm.currentSource)!.exports.memory as any).buffer;
 			const bytes = new Uint8Array(buffer, ptr, len);
-			return String.fromCharCode(...bytes);
+			return new TextDecoder().decode(bytes);
 		}
 		return '';
 	}

@@ -47,10 +47,9 @@ export class Aidoku {
 		let tagBytes = Wasm.readBytes(tags, tagCount * 4);
 		let tagLengthBytes = Wasm.readBytes(tagsStrLens, tagCount * 4);
 		for (let i = 0; i < tagCount * 4; i += 4) {
-			let tag = Wasm.readString(
-				new Uint32Array(tagBytes.slice(i, i + 4))[0],
-				new Uint32Array(tagLengthBytes.slice(i, i + 4))[0]
-			);
+			let tagPtr: number = tagBytes[i] + (tagBytes[i + 1] << 8) + (tagBytes[i + 2] << 16) + (tagBytes[i + 3] << 24);
+			let tagLen: number = tagLengthBytes[i] + (tagLengthBytes[i + 1] << 8) + (tagLengthBytes[i + 2] << 16) + (tagLengthBytes[i + 3] << 24);
+			let tag = Wasm.readString(tagPtr, tagLen);
 			tagList.push(tag);
 		}
 		let manga = new Manga(

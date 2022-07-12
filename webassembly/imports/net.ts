@@ -230,8 +230,7 @@ export class Net {
 	static json(descriptor: number): number {
 		if (Wasm.requests.has(descriptor) && Wasm.requests.get(descriptor)!.response?.data) {
 			let response = Wasm.requests.get(descriptor)!.response!;
-			console.dir(Wasm.stdDescriptors, Wasm.stdReferences)
-			let result = JSON.parse(String.fromCharCode(...response.data!));
+			let result = JSON.parse(new TextDecoder().decode(response.data!));
 			return Wasm.storeStdValue(result);
 		}
 		return -1;
@@ -240,7 +239,7 @@ export class Net {
 	static html(descriptor: number): number {
 		if (Wasm.requests.has(descriptor) && Wasm.requests.get(descriptor)!.response?.data) {
 			let response = Wasm.requests.get(descriptor)!.response;
-			return Wasm.storeStdValue(load(String.fromCharCode(...response!.data!)).root() as Cheerio<AnyNode>);
+			return Wasm.storeStdValue(load(new TextDecoder().decode(response!.data!)).root() as Cheerio<AnyNode>);
 		}
 		return -1;
 	}

@@ -17,7 +17,8 @@ export class Defaults {
 		}
 
 		let keyString = Wasm.readString(key, length);
-		let value = localStorage.getItem(`manga:aidoku:${Wasm.currentSource}:${keyString}`);
+		let defaults = JSON.parse(localStorage.getItem(`manga`) || '{}');
+		let value = defaults['aidoku'] && defaults['aidoku'][Wasm.currentSource] && defaults['aidoku'][Wasm.currentSource][keyString] ? defaults['aidoku'][Wasm.currentSource][keyString] : null;
 		if(!value) {
 			return -1;
 		}
@@ -68,7 +69,15 @@ export class Defaults {
 				}
 				break;
 		}
-		localStorage.setItem(`manga:aidoku:${Wasm.currentSource}:${keyString}`, `${valueType}:${valueString}`);
+		let defaults = JSON.parse(localStorage.getItem(`manga`) || '{}');
+		if(!defaults['aidoku']) {
+			defaults['aidoku'] = {};
+		}
+		if(!defaults['aidoku'][Wasm.currentSource]) {
+			defaults['aidoku'][Wasm.currentSource] = {};
+		}
+		defaults['aidoku'][Wasm.currentSource][keyString] = `${valueType}:${valueString}`;
+		localStorage.setItem(`manga`, JSON.stringify(defaults));
 	}
 	static stringArrayToString(arr: string[]): string {
         return arr.join("\0");
