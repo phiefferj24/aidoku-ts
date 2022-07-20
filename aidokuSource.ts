@@ -1,8 +1,9 @@
 import { CheckFilter, FilterBase, GenreFilter, GroupFilter, SelectFilter, SortFilter, SortSelection, TextFilter, TitleFilter } from "./models/filter";
-import { Manga, MangaPageResult, MangaChapter, MangaFilter, MangaFilterType, MangaPage, MangaSource, MangaSourceType, ExternalMangaSource } from "../mangaSource";
+import { Manga, MangaPageResult, MangaChapter, MangaPage, MangaSource, MangaSourceType, ExternalMangaSource } from "../mangaSource";
 import * as Aidoku from "./models";
 import { BlobReader, ZipReader, TextWriter, Uint8ArrayWriter } from "@zip.js/zip.js";
 import { Wasm } from "./webassembly/wasm";
+import * as Source from "../../source";
 
 export class AidokuSource implements MangaSource {
     name: string;
@@ -15,11 +16,30 @@ export class AidokuSource implements MangaSource {
     filtersJson: any;
     settingsJson: any;
 
-    async getMangaList(filters: MangaFilter[], page: number): Promise<MangaPageResult> {
+    async getFilters(): Promise<Source.Filter[]> {
+        let filters: Source.Filter[] = [];
+        for (let filter of this.filtersJson) {
+            if (filter.type === "title") {
+                filters.push(new Source.TextFilter("Title"));
+            } else if (filter.type === "author") {
+                filters.push(new Source.TextFilter("Author"));
+            } else if (filter.type === "group" && filter.filters.length > 0) {
+                let indices = filter.filters.map((item, index) => item["index"] = index).filter(item => item.default === true).map(item => item.index);
+                filters.push(new Source.MultiSelectFilter(filter.name, filter.filters.map(f => f.name), filter.filters[0].canExclude ?? false, filter.filters.map(f => f.id), indices));
+            } else if (filter.type === "sort") {
+                filters.push(new Source.SortFilter(filter.name, filter.options, filter.canAscend, [], filter.default.index, filter.default.ascending))
+            } else if (filter.type === "select") {
+                filters.push(new Source.SingleSelectFilter(filter.name, filter.options, filter.canExclude ?? false, [], filter.default))
+            }
+        }
+        return filters;
+    }
+
+    async getMangaList(filters: Source.Filter[], page: number): Promise<MangaPageResult> {
         let aidokuFilters: FilterBase[] = [];
         for (let filter of filters) {
-            switch(filter.type) {
-                case MangaFilterType.text:
+            switch (filter.type) {
+                case Source.FilterType.text:
                     switch(filter.name) {
                         case "Title": 
                             aidokuFilters.push(new TitleFilter(filter.value as string));
@@ -31,29 +51,20 @@ export class AidokuSource implements MangaSource {
                             aidokuFilters.push(new TextFilter(filter.name, filter.value as string));
                     }
                     break;
-                case MangaFilterType.singleSelect:
-                    aidokuFilters.push(new SelectFilter(filter.name, filter.value as string[], filter.index));
+                case Source.FilterType.singleSelect:
+                    aidokuFilters.push(new SelectFilter(filter.name, filter.value as string[], (<Source.SingleSelectFilter>filter).index));
                     break;
-                case MangaFilterType.singleSelectAscendable:
-                    aidokuFilters.push(new SortFilter(filter.name, filter.value as string[], true, new SortSelection(filter.index, filter.ascending ?? false)));
+                case Source.FilterType.sort:
+                    aidokuFilters.push(new SortFilter(filter.name, filter.value as string[], (<Source.SortFilter>filter).canAscend, new SortSelection((<Source.SortFilter>filter).index, (<Source.SortFilter>filter).ascending)));
                     break;
-                case MangaFilterType.multiSelect:
+                case Source.FilterType.multiSelect:
                     let innerFilters: FilterBase[];
                     if(filter.name.includes("Genre")) {
-                        innerFilters = (filter.value as string[]).map((value, index) => new GenreFilter(value, false, filter.ids?.[index] ?? null, null));
+                        innerFilters = (filter.value as string[]).map((value, index) => new GenreFilter(value, (<Source.MultiSelectFilter>filter).canExclude, (<Source.MultiSelectFilter>filter).ids?.[index] ?? null, ((<Source.MultiSelectFilter>filter).excludings)[index]));
                     } else {
-                        innerFilters = (filter.value as string[]).map((value, index) => new CheckFilter(value, false, filter.ids?.[index] ?? null, null));
+                        innerFilters = (filter.value as string[]).map((value, index) => new CheckFilter(value, (<Source.MultiSelectFilter>filter).canExclude, (<Source.MultiSelectFilter>filter).ids?.[index] ?? null, ((<Source.MultiSelectFilter>filter).excludings)[index]));
                     }
                     aidokuFilters.push(new GroupFilter(filter.name, innerFilters));
-                    break;
-                case MangaFilterType.multiSelectAscendable:
-                    let innerFilters2: FilterBase[];
-                    if(filter.name.includes("Genre")) {
-                        innerFilters2 = (filter.value as string[]).map((value, index) => new GenreFilter(value, true, filter.ids?.[index] ?? null, null));
-                    } else {
-                        innerFilters2 = (filter.value as string[]).map((value, index) => new CheckFilter(value, true, filter.ids?.[index] ?? null, null));
-                    }
-                    aidokuFilters.push(new GroupFilter(filter.name, innerFilters2));
                     break;
             }
         }
@@ -131,13 +142,13 @@ export class AidokuSource implements MangaSource {
             c.scanlator,
             c.dateUpdated,
             c.lang,
-            c.volumeNum,
+            c.volumeNum === -1 ? null : c.volumeNum,
         ));
     }
     async getMangaChapterPages(id: string, chapterId: string): Promise<MangaPage[]> {
-        let chapterDescriptor = Wasm.storeStdValue(new Aidoku.Chapter.Chapter(this.id, id, chapterId));
+        let chapterDescriptor = Wasm.storeStdValue(new Aidoku.Chapter.Chapter(this.id, chapterId, id));
         Wasm.currentSource = this.id;
-        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_chapter_pages(chapterDescriptor);
+        let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_page_list(chapterDescriptor);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Page.Page[];
         Wasm.removeStdValue(chapterDescriptor);
         Wasm.removeStdValue(resultDescriptor);
@@ -178,6 +189,38 @@ export class AidokuSource implements MangaSource {
         this.image = baseUrl + "/icons/" + json.icon;
         for(let obj of this.settingsJson) {
             this.parseSettings(obj);
+        }
+        let sourceLang = this.id.split(".")[0];
+        if(sourceLang === "multi") {
+            let defaults = JSON.parse(localStorage.getItem("manga") || "{}");
+            if(!defaults['aidoku']) defaults['aidoku'] = {};
+            if(!defaults['aidoku'][this.id]) defaults['aidoku'][this.id] = {};
+            let languages = window.navigator.languages || [window.navigator.language] || [];
+            let defaultLanguages: string[] = [];
+            if(this.sourceJson.languages) {
+                for(let i = 0; i < this.sourceJson.languages.length; ++i) {
+                    let language = this.sourceJson.languages[i];
+                    if(languages.includes(language.code)) {
+                        defaultLanguages.push(language.value ?? language.code)
+                    }
+                }
+                if(defaultLanguages.length === 0) {
+                    for(let i = 0; i < this.sourceJson.languages.length; ++i) {
+                        let language = this.sourceJson.languages[i];
+                        if(language.default) {
+                            defaultLanguages.push(language.value ?? language.code)
+                        }
+                    }
+                }
+                if(defaultLanguages.length === 0 && this.sourceJson.languages.length > 0) {
+                    defaultLanguages.push(this.sourceJson.languages[0].value ?? this.sourceJson.languages[0].code)
+                }
+                if(this.sourceJson.languageSelectType === "single" && this.sourceJson.languages.length > 0) {
+                    defaultLanguages = [this.sourceJson.languages[0].value ?? this.sourceJson.languages[0].code]
+                }
+                defaults['aidoku'][this.id]['languages'] = `stringarray:${AidokuSource.stringArrayToString(defaultLanguages)}`;
+            }
+            localStorage.setItem("manga", JSON.stringify(defaults));
         }
         await Wasm.startWithData(this.id, mainWasm.buffer);
     }
