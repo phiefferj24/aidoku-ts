@@ -22,7 +22,7 @@ export class Wasm {
     }
 
 	static async startWithData(id: string, data: ArrayBuffer) {
-        let module = await WebAssembly.compile(data);
+        let module = await WebAssembly.compile(data).catch((e) => console.log(e)) as WebAssembly.Module;
         let instance = await WebAssembly.instantiate(module, this.imports);
         if (instance.exports['initialize']) {
             (instance.exports as any).initialize();

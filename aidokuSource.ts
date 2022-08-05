@@ -5,7 +5,7 @@ import { BlobReader, ZipReader, TextWriter, Uint8ArrayWriter } from "@zip.js/zip
 import { Wasm } from "./webassembly/wasm";
 import * as Source from "../../source";
 
-export class AidokuSource implements MangaSource {
+export default class AidokuSource implements MangaSource {
     name: string;
     id: string;
     version: string;
@@ -33,6 +33,14 @@ export class AidokuSource implements MangaSource {
             }
         }
         return filters;
+    }
+
+    async getListings(): Promise<Source.Listing[]> {
+        return [];
+    }
+
+    async modifyImageRequest(request: Request): Promise<Request> {
+        return request;
     }
 
     async getMangaList(filters: Source.Filter[], page: number): Promise<MangaPageResult> {
@@ -87,9 +95,9 @@ export class AidokuSource implements MangaSource {
             m.nsfw,
         )), result.hasNextPage);
     }
-    async getMangaListing(name: string, page: number): Promise<MangaPageResult> {
-        let listing = new Aidoku.Listing.Listing(name);
-        let listingDescriptor = Wasm.storeStdValue(listing);
+    async getMangaListing(listing: Source.Listing, page: number): Promise<MangaPageResult> {
+        let listing2 = new Aidoku.Listing.Listing(listing.name);
+        let listingDescriptor = Wasm.storeStdValue(listing2);
         Wasm.currentSource = this.id;
         let resultDescriptor = await (Wasm.instances.get(Wasm.currentSource)!.exports as any).get_manga_listing(listingDescriptor, page);
         let result = Wasm.readStdValue(resultDescriptor) as Aidoku.Manga.MangaPageResult;
@@ -289,8 +297,10 @@ export class AidokuSource implements MangaSource {
         return arr.join("\0");
     }
 
-    static parseSourceList(list: any, url: string): ExternalMangaSource[] {
+    static async parseSourceList(url: string): Promise<ExternalMangaSource[]> {
         let sources: ExternalMangaSource[] = [];
+        let response = await fetch(url);
+        let list = await response.json();
         for(let obj of list) {
             sources.push({
                 name: obj.name,

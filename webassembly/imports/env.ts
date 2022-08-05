@@ -25,6 +25,6 @@ export class Env {
         let message = Wasm.readString(msg, messageLength);
         let file = Wasm.readString(fileName, fileLength);
 
-        console.error(`${message} ${file}:${line}:${column}`);
+        console.error(`${Wasm.currentSource}: ${message} ${file}:${line}:${column}`);
     }
 }
