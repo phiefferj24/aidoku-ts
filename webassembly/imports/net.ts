@@ -168,7 +168,7 @@ export class Net {
 					break;
 			}
 			let xhr = new XMLHttpRequest();
-			xhr.open(method, `https://proxy.soshiki.moe/${Wasm.requests.get(descriptor)!.url!}`, false);
+			xhr.open(method, `${window['soshiki'].proxy}/${Wasm.requests.get(descriptor)!.url!}`, false);
 			for(let header of Wasm.requests.get(descriptor)!.headers) {
 				xhr.setRequestHeader(header[0], header[1]);
 			}
